@@ -5,6 +5,9 @@ const PORT = 4000
 //New imports
 const http = require('http').Server(app)
 const cors = require('cors')
+const messageResponse = require('./socketActions/message')
+const typingResponse = require('./socketActions/typing')
+const { newUser, removeUser } = require('./socketActions/user')
 
 app.use(cors())
 
@@ -14,32 +17,16 @@ const socketIO = require('socket.io')(http, {
   }
 })
 
-let users = []
-
 socketIO.on('connection', (socket) => {
   console.log(`⚡: ${socket.id} user just connected!`)
-  socket.on('message', (data) => {
-    socketIO.emit('messageResponse', data)
-  })
 
-  socket.on('typing', (data) => socket.broadcast.emit('typingResponse', data))
-
-  //Listens when a new user joins the server
-  socket.on('newUser', (data) => {
-    //Adds the new user to the list of users
-    users.push(data)
-    // console.log(users);
-    //Sends the list of users to the client
-    socketIO.emit('newUserResponse', users)
-  })
+  messageResponse(socket, socketIO)
+  typingResponse(socket)
+  newUser(socket, socketIO)
 
   socket.on('disconnect', () => {
     console.log('🔥: A user disconnected')
-    //Updates the list of users when a user disconnects from the server
-    users = users.filter((user) => user.socketID !== socket.id)
-    // console.log(users);
-    //Sends the list of users to the client
-    socketIO.emit('newUserResponse', users)
+    removeUser(socket, socketIO)
     socket.disconnect()
   })
 })
